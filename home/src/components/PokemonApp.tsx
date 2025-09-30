@@ -27,12 +27,7 @@ function MintCard() {
   const { instance, isLoading: zamaLoading } = useZamaInstance();
   const signerPromise = useEthersSigner();
 
-  const [name, setName] = useState('');
-  const [imageURI, setImageURI] = useState('');
-  const [level, setLevel] = useState('1');
-  const [hp, setHp] = useState('50');
-  const [attack, setAttack] = useState('10');
-  const [defense, setDefense] = useState('5');
+  const [tokenUri, setTokenUri] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string>('');
 
@@ -45,27 +40,14 @@ function MintCard() {
     try {
       setSubmitting(true);
       setTxHash('');
-      // Prepare encrypted inputs: level, hp, attack, defense, encryptedTo (recipient = minter)
+      // Prepare encrypted input: recipient address only
       const buf = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
-      buf.add32(parseInt(level));
-      buf.add32(parseInt(hp));
-      buf.add32(parseInt(attack));
-      buf.add32(parseInt(defense));
       buf.addAddress(address);
       const enc = await buf.encrypt();
 
       const signer = await signerPromise;
       const c = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const tx = await c.mintCard(
-        name,
-        imageURI,
-        enc.handles[0], // level
-        enc.handles[1], // hp
-        enc.handles[2], // attack
-        enc.handles[3], // defense
-        enc.handles[4], // encryptedTo
-        enc.inputProof
-      );
+      const tx = await c.mintCard(tokenUri, enc.handles[0], enc.inputProof);
       const rc = await tx.wait();
       setTxHash(rc?.hash ?? tx.hash);
     } catch (err:any) {
@@ -80,14 +62,7 @@ function MintCard() {
     <div className="card">
       <h2>Mint New Card</h2>
       <form onSubmit={onMint} className="form">
-        <label>Name<input value={name} onChange={e=>setName(e.target.value)} required/></label>
-        <label>Image URI<input value={imageURI} onChange={e=>setImageURI(e.target.value)} required/></label>
-        <div className="grid2">
-          <label>Level<input type="number" value={level} onChange={e=>setLevel(e.target.value)} min={0} required/></label>
-          <label>HP<input type="number" value={hp} onChange={e=>setHp(e.target.value)} min={0} required/></label>
-          <label>Attack<input type="number" value={attack} onChange={e=>setAttack(e.target.value)} min={0} required/></label>
-          <label>Defense<input type="number" value={defense} onChange={e=>setDefense(e.target.value)} min={0} required/></label>
-        </div>
+        <label>Token URI<input value={tokenUri} onChange={e=>setTokenUri(e.target.value)} required/></label>
         <button disabled={submitting || zamaLoading || !address}>{submitting? 'Minting...' : 'Mint'}</button>
       </form>
       {txHash && <p className="hint">Tx: <a target="_blank" rel="noreferrer" href={`https://sepolia.etherscan.io/tx/${txHash}`}>{txHash.slice(0,10)}...</a></p>}
@@ -104,10 +79,18 @@ function ViewCard() {
     functionName: 'totalSupply'
   });
 
-  const { data: card } = useReadContract({
+  const { data: tokenUri } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
-    functionName: 'getCard',
+    functionName: 'tokenURI',
+    args: tokenId ? [BigInt(tokenId)] : undefined,
+    query: { enabled: !!tokenId }
+  });
+
+  const { data: encOwner } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'getEncryptedOwner',
     args: tokenId ? [BigInt(tokenId)] : undefined,
     query: { enabled: !!tokenId }
   });
@@ -127,21 +110,16 @@ function ViewCard() {
         <label>Token ID<input value={tokenId} onChange={e=>setTokenId(e.target.value)} /></label>
         {typeof total !== 'undefined' && <p className="hint">Total Supply: {String(total)}</p>}
       </div>
-      {card && (
+      {(owner || tokenUri) && (
         <div className="card-view">
           <div className="meta">
-            <p><strong>Name:</strong> {card[0] as string}</p>
             <p><strong>Owner:</strong> {owner as string}</p>
           </div>
-          {(card[1] as string) && (
-            <img src={card[1] as string} alt="card" className="preview"/>
+          {(tokenUri as string) && (
+            <img src={tokenUri as string} alt="card" className="preview"/>
           )}
           <div className="meta">
-            <p>Level: ***</p>
-            <p>HP: ***</p>
-            <p>Attack: ***</p>
-            <p>Defense: ***</p>
-            <p>Encrypted Owner: {(card[6] as string).slice(0,20)}...</p>
+            <p>Encrypted Owner: {encOwner ? (encOwner as string).slice(0,20) + '...' : '***'}</p>
           </div>
         </div>
       )}
@@ -202,4 +180,3 @@ function TransferCard() {
     </div>
   );
 }
-
