@@ -111,13 +111,13 @@ function ViewCard() {
     query: { enabled: !!tokenId }
   });
 
-  const { data: encOwner } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'getEncryptedOwner',
-    args: tokenId ? [BigInt(tokenId)] : undefined,
-    query: { enabled: !!tokenId }
-  });
+  // const { data: encOwner } = useReadContract({
+  //   address: CONTRACT_ADDRESS,
+  //   abi: CONTRACT_ABI,
+  //   functionName: 'getEncryptedOwner',
+  //   args: tokenId ? [BigInt(tokenId)] : undefined,
+  //   query: { enabled: !!tokenId }
+  // });
 
   const { data: owner } = useReadContract({
     address: CONTRACT_ADDRESS,
