@@ -3,7 +3,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contracts';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
-import { Contract } from 'ethers';
+import { Contract, isAddress } from 'ethers';
 import '../styles/PokemonApp.css';
 
 export function PokemonApp() {
@@ -28,6 +28,7 @@ function MintCard() {
   const signerPromise = useEthersSigner();
 
   const [tokenUri, setTokenUri] = useState('');
+  const [recipient, setRecipient] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string>('');
 
@@ -37,12 +38,16 @@ function MintCard() {
       alert('Connect wallet and wait for Zama SDK');
       return;
     }
+    if (!isAddress(recipient)) {
+      alert('Invalid recipient address');
+      return;
+    }
     try {
       setSubmitting(true);
       setTxHash('');
       // Prepare encrypted input: recipient address only
       const buf = instance.createEncryptedInput(CONTRACT_ADDRESS, address);
-      buf.addAddress(address);
+      buf.addAddress(recipient);
       const enc = await buf.encrypt();
 
       const signer = await signerPromise;
@@ -63,6 +68,7 @@ function MintCard() {
       <h2>Mint New Card</h2>
       <form onSubmit={onMint} className="form">
         <label>Token URI<input value={tokenUri} onChange={e=>setTokenUri(e.target.value)} required/></label>
+        <label>Recipient Address(Will be encrypted on chain)<input value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="0x..." required/></label>
         <button disabled={submitting || zamaLoading || !address}>{submitting? 'Minting...' : 'Mint'}</button>
       </form>
       {txHash && <p className="hint">Tx: <a target="_blank" rel="noreferrer" href={`https://sepolia.etherscan.io/tx/${txHash}`}>{txHash.slice(0,10)}...</a></p>}
@@ -119,7 +125,7 @@ function ViewCard() {
             <img src={tokenUri as string} alt="card" className="preview"/>
           )}
           <div className="meta">
-            <p>Encrypted Owner: {encOwner ? (encOwner as string).slice(0,20) + '...' : '***'}</p>
+            <p>Encrypted Owner: ***</p>
           </div>
         </div>
       )}

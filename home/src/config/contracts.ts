@@ -1,3 +1,5 @@
+// RWAPokemonCards contract on Sepolia (fill after deployment)
+export const CONTRACT_ADDRESS = '0x0d03b6754EbD66F2E4bDCBE951AA615947d048E5' as `0x${string}`;
 export const CONTRACT_ABI = [
   { "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
   { "inputs": [], "name": "UnauthorizedTransfer", "type": "error" },
@@ -160,5 +162,4 @@ export const CONTRACT_ABI = [
     "type": "function"
   }
 ] as const;
-// RWAPokemonCards contract on Sepolia (fill after deployment)
-export const CONTRACT_ADDRESS = '' as `0x${string}`;
+
